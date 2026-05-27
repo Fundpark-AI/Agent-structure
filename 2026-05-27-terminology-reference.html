@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HMAS Terminology Reference (v2 design) — 2026-05-27</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --ink: #1a1a1a;
+    --ink-soft: #555;
+    --rule: #e5e3dc;
+    --accent: #2c5f8d;
+    --accent-soft: #eaf0f6;
+    --warn: #b85c00;
+    --warn-soft: #fdf2e3;
+    --code-bg: #f3f1ea;
+    --tier-a: #2c7a4b;
+    --tier-b: #b3791b;
+    --tier-c: #999;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    font-size: 15px;
+    padding: 2rem 1rem 4rem;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header.title {
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  h1 {
+    font-size: 1.7rem;
+    margin: 0 0 0.4rem;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 1.2rem;
+    margin: 2.2rem 0 0.7rem;
+    color: var(--accent);
+    border-left: 4px solid var(--accent);
+    padding-left: 0.6rem;
+  }
+  h3 {
+    font-size: 1rem;
+    margin: 1.4rem 0 0.5rem;
+    color: var(--ink);
+  }
+  p, li { color: var(--ink); }
+  .meta {
+    background: var(--accent-soft);
+    border: 1px solid #c9d8e6;
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .meta strong { color: var(--ink); }
+  .meta ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+  .meta li { margin: 0.15rem 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0 1.2rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.93rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #fafafa; }
+  td code, p code, li code {
+    background: var(--code-bg);
+    padding: 0.08em 0.4em;
+    border-radius: 3px;
+    font-size: 0.88em;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  .term { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .cardinality { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  pre.diagram {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    color: var(--ink);
+    margin: 0.8rem 0 1.2rem;
+  }
+  .rules {
+    background: var(--warn-soft);
+    border: 1px solid #f0d3a8;
+    border-left: 4px solid var(--warn);
+    border-radius: 6px;
+    padding: 0.8rem 1.2rem;
+    margin: 0.8rem 0 1.2rem;
+  }
+  .rules ol { margin: 0.3rem 0; padding-left: 1.4rem; }
+  .rules li { margin: 0.4rem 0; }
+  .rules li strong { color: var(--warn); }
+  .pointers a { color: var(--accent); text-decoration: none; word-break: break-all; }
+  .pointers a:hover { text-decoration: underline; }
+  .pointers li { margin: 0.4rem 0; }
+  .note {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    font-style: italic;
+    margin-top: -0.3rem;
+    margin-bottom: 0.8rem;
+  }
+  .tier-pill {
+    display: inline-block;
+    padding: 0.05em 0.5em;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: white;
+  }
+  .tier-a { background: var(--tier-a); }
+  .tier-b { background: var(--tier-b); }
+  .tier-c { background: var(--tier-c); }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  @media print {
+    body { background: white; padding: 0; }
+    h2 { page-break-after: avoid; }
+    table, pre.diagram, .rules { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="title">
+  <h1>HMAS Terminology Reference</h1>
+  <div style="color: var(--ink-soft); font-size: 0.95rem;">v2 design · snapshot 2026-05-27</div>
+</header>
+
+<div class="meta">
+  <strong>Status.</strong> Snapshot as of 2026-05-27. Use until the glossary alignment issue lands in <code>Fundpark-AI/hmas-functions-hub</code> (<code>docs/GLOSSARY.md</code>). If a term here ever contradicts the repo glossary after that merge, <strong>the repo wins.</strong>
+  <ul>
+    <li><strong>Audience:</strong> runbook writers, coordinator-prompt writers, R&amp;D, engineering</li>
+    <li><strong>Maintainer:</strong> Bob (Krell)</li>
+    <li><strong>Sources:</strong> <code>HMAS-agent-restructure-v2-Alice-revision2.html</code>; 2026-05-26 runbook consensus memo; 2026-05-27 flow-first memo; <code>docs/GLOSSARY.md</code> (Andrew)</li>
+  </ul>
+</div>
+
+<h2>1. Architectural layers — the hierarchy</h2>
+
+<pre class="diagram">Orchestrator
+   │
+   ├── 3 Gates    (margin, platform_risk, quality_compliance_triage)
+   ├── 1 Critic   (final reviewer, post-plan)
+   │
+   └── 8 Coordinators
+          └── ~22 Agents   (Tier A: 14, Tier B: 8; Tier C deferred)</pre>
+
+<table>
+  <thead>
+    <tr>
+      <th>Term</th>
+      <th>Definition</th>
+      <th>Cardinality</th>
+      <th>Repo equivalent</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="term">Orchestrator</span></td>
+      <td>The single top-level dispatcher. Builds the holistic plan <strong>before</strong> any action; carries data between coordinators. Krell's analogy: "general manager" — broad, not deep.</td>
+      <td class="cardinality">1</td>
+      <td><strong>Orchestrator</strong> (same) — <code>src/agents/orchestrator.py</code></td>
+    </tr>
+    <tr>
+      <td><span class="term">Coordinator</span></td>
+      <td>Middle-layer dispatcher under the Orchestrator. <strong>Prompt only</strong> — no runbooks, no tools. Decomposes an attributed job into agent tasks, dispatches to its specialist agents, assembles results. <strong>Coordinators do not call each other.</strong></td>
+      <td class="cardinality">8</td>
+      <td><em>New in v2.</em> No current equivalent; pending glossary issue.</td>
+    </tr>
+    <tr>
+      <td><span class="term">Agent</span></td>
+      <td>A specialist that does one domain's work. Equipped with <strong>prompt + one or more runbooks + tools</strong>. Reports back to its coordinator only.</td>
+      <td class="cardinality">~22<br><span class="tier-pill tier-a">14 A</span> <span class="tier-pill tier-b">8 B</span></td>
+      <td><strong>Sub-Agent</strong> — <code>SubAgentBase</code> subclass under <code>src/agents/implementations/&lt;domain&gt;.py</code></td>
+    </tr>
+    <tr>
+      <td><span class="term">Gate</span></td>
+      <td>A specialist agent the Orchestrator consults as <strong>minimum context before building the plan</strong>. Currently: <code>margin</code>, <code>platform_risk</code>, <code>quality_compliance_triage</code>.</td>
+      <td class="cardinality">3</td>
+      <td>No distinct repo term — gates are Sub-Agents with a specific pre-plan role.</td>
+    </tr>
+    <tr>
+      <td><span class="term">Critic</span></td>
+      <td>A final reviewer. Quality-checks the Orchestrator's <strong>assembled answer after</strong> all sub-agents have run. <strong>Not a gate.</strong> Rejection triggers one Report retry; sub-agents are not re-run.</td>
+      <td class="cardinality">1</td>
+      <td><strong>Critic</strong> — <code>src/agents/critic.py</code> (same)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2. On-disk artefacts — what writers produce</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Term</th>
+      <th>Definition</th>
+      <th>Where it lives in repo</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="term">Runbook</span></td>
+      <td>A procedural file an agent loads. Step-by-step "what to do" in a specific situation. <strong>Must contain the agent ID + coordinator ID</strong> the runbook belongs to.</td>
+      <td><code>docs/runbooks/&lt;name&gt;.md</code></td>
+      <td>v2 design: an agent has <strong>one or more</strong> runbooks. (Repo glossary today says "a runbook" singular — being updated.)</td>
+    </tr>
+    <tr>
+      <td><span class="term">Prompt</span><br>(system prompt)</td>
+      <td>A file that defines <strong>who the agent (or coordinator) is</strong> — role, posture, scope. Loaded into every LLM call.</td>
+      <td><code>src/agents/prompts/&lt;name&gt;.md</code></td>
+      <td>"Prompt = who you are. Runbook = what to do." Don't confuse them.</td>
+    </tr>
+    <tr>
+      <td><span class="term">Tool</span></td>
+      <td>An external action the agent can request — typically <strong>an API call or aggregation query</strong>. Each tool = one Hub HTTP endpoint.</td>
+      <td>Hub endpoints under <code>src/functions_hub/</code>; tool wiring in <code>src/agents/</code></td>
+      <td>Tools are the agent's verbs. The runbook tells the agent <strong>when</strong> to use which tool.</td>
+    </tr>
+    <tr>
+      <td><span class="term">Red-line evaluation</span></td>
+      <td>The acceptance gate for an agent or coordinator. Format: <strong>checklist</strong> or <strong>pass/fail rubric</strong>. Required for every runbook and coordinator prompt. Template: Krell's Campaign Architecture runbook.</td>
+      <td>Inline in each runbook / coordinator prompt</td>
+      <td>In repo terms: combines <strong>Bounds</strong> (<code>src/agents/safety/bounds.py</code>), <strong>Kill-switch</strong> (<code>src/agents/safety/killswitch.py</code>), and <strong>Audit</strong> (<code>docs/AUDIT_ARCHITECTURE.md</code>).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3. Process &amp; priority</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Term</th>
+      <th>Definition</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="term">The Flow</span></td>
+      <td>The communication contract between layers — how agents talk to the coordinator, coordinator to orchestrator, orchestrator to client, and back. <strong>Concept</strong>, not a runbook. Originated by <strong>Steven + Sun</strong>; domain experts supply query examples. <strong>Flow comes before runbook detail.</strong></td>
+    </tr>
+    <tr>
+      <td><span class="term">Tier A / B / C</span></td>
+      <td><strong>Writing priority</strong>, not architectural rank. Tier A (14 agents) + Tier B (8 agents) ship by <strong>2026-06-03</strong>. Tier C (8 agents) is <strong>deferred</strong> until a necessity is identified.</td>
+    </tr>
+    <tr>
+      <td><span class="term">Plan call</span></td>
+      <td>The Orchestrator's first LLM call. Produces a JSON plan of steps <code>{agent, goal, notes}</code>.</td>
+    </tr>
+    <tr>
+      <td><span class="term">Report call</span></td>
+      <td>The Orchestrator's second LLM call. After sub-agents run, summarises results for the user. Reviewed by the Critic.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>4. Communication rules (locked)</h2>
+
+<p class="note">Non-negotiable for this design round. These govern who talks to whom.</p>
+
+<div class="rules">
+  <ol>
+    <li><strong>Agents talk to their own coordinator only.</strong> Never to another agent. Never to another coordinator. Never directly to the Orchestrator.</li>
+    <li><strong>Coordinators talk to the Orchestrator only.</strong> Never to another coordinator.</li>
+    <li><strong>The Orchestrator builds the full plan upfront, before any action.</strong> Sub-agents do not act before the plan exists.</li>
+    <li><strong>Missing information path:</strong> Agent → its coordinator → Orchestrator (if the coordinator can't resolve it).</li>
+  </ol>
+</div>
+
+<h2>5. Pointers</h2>
+
+<ul class="pointers">
+  <li>Repo glossary (authoritative once aligned): <a href="https://github.com/Fundpark-AI/hmas-functions-hub/blob/main/docs/GLOSSARY.md">github.com/Fundpark-AI/hmas-functions-hub/blob/main/docs/GLOSSARY.md</a></li>
+  <li>Pending glossary alignment issue: see <code>2026-05-27-github-issue-draft-terminology.md</code> in this folder.</li>
+  <li>Runbook format example (Krell): <a href="https://github.com/krell-fpai/hmas-agent-end-to-end/blob/main/docs/runbooks/campaign_architecture/01-performance-diagnostic.md">krell-fpai/hmas-agent-end-to-end · campaign_architecture/01-performance-diagnostic.md</a></li>
+</ul>
+
+<footer>
+  Generated 2026-05-27 · single-file HTML, no build step · opens in any browser
+</footer>
+
+</div>
+</body>
+</html>
