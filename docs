@@ -1,1 +1,190 @@
+# Meeting Memo — HMAS Run Book & Coordinator Prompt Build
 
+**Date:** 2026-05-26
+**Audience:** R&D team (run book writers, prompt writers)
+**Owner:** Bob (Krell)
+**Deadline:** All run books finished by **Wednesday 2026-06-03 EOD**
+**Reference design:** `HMAS-agent-restructure-v2-Alice-revision2.html` (Alice's final revision — agreed)
+
+---
+
+> **Note on terminology (2026-05-27):** This memo uses the writer-cohort vocabulary — **Coordinator**, **Agent**, **Runbook**, **Red-line eval** — which intentionally differs from the current `docs/GLOSSARY.md` in `Fundpark-AI/hmas-functions-hub`. A glossary alignment issue has been drafted (see `2026-05-27-github-issue-draft-terminology.md` in this folder) and will be filed against the repo. Until that lands, treat this memo as the source of truth for writer terminology. "Handbook" was a typo for **Runbook** in earlier drafts and has been corrected throughout.
+
+---
+
+## 1. Decision summary
+
+- Alice's v2 revision 2 is the **agreed final design**. All run books and coordinator prompts are written against this structure.
+- Build scope: **14 Tier A specialists + 8 Tier B specialists** = 22 agent run books. **Tier C (8 agents) is deferred** until/unless we find a necessity to start that part. **Tiers reflect runbook-writing priority**, not architectural rank — A and B ship this round (2026-06-03); C waits.
+- 8 Master agents (coordinators) get a **prompt each**, not a run book.
+- **3 gates** (`margin (gate)`, `platform_risk (gate)`, `quality_compliance_triage (gate)`) report directly to the Orchestrator and are consulted as minimum context **before** the plan is built. The `critic` is **not a gate** — it is a **final reviewer** that quality-checks the Orchestrator's assembled answer **after** all sub-agents have run (see §8.1 and repo `src/agents/critic.py`).
+
+---
+
+## 2. Architecture model (how a job flows)
+
+```
+Seller question
+      │
+      ▼
+[Orchestrator]  ←── consults gates (margin, platform_risk, quality_compliance_triage)
+      │                as minimum context BEFORE building the plan
+      │
+      ▼  attributes job + drafts plan
+[Coordinator (Master agent)]
+      │
+      ▼  decomposes target into agent tasks
+[Agent]  ←── equipped with runbooks + tools
+      │
+      ▼
+   result → coordinator → orchestrator
+```
+
+**Rules (locked, from prior dialog):**
+1. Coordinators in `src/agents/` **must not call each other directly**.
+2. The **Orchestrator is the only dispatcher** and the only carrier of data between coordinators.
+3. The **full plan (sequential vs parallel per step) is decided upfront at intake**, before any coordinator runs.
+
+---
+
+## 3. Coordinator design rules
+
+- Each coordinator has **one prompt only** — no runbooks, no tools.
+- Keep coordinator scope **deliberately narrow** so a single prompt is enough. *(Note: original phrasing said "over-complicate" — interpreted here as keep-simple. Confirm with Bob.)*
+- Coordinator job = receive attributed job + plan from Orchestrator → decompose into agent tasks → dispatch to its specialist agents → return results.
+- Coordinators do not talk to other coordinators. All cross-domain data goes through the Orchestrator.
+
+---
+
+## 4. Agent design rules
+
+- Each agent is equipped with **one or more runbooks + tools**. (A **tool** is an action the agent can request — e.g. an API call or aggregation query — corresponding to a Hub HTTP endpoint in the repo.)
+- Every **runbook must contain both the agent ID and the coordinator ID** it belongs to. The exact mechanism (frontmatter, header block, inline) is at the writer's discretion for this round — see §11 open item.
+- If a writer discovers that an additional agent is needed while drafting a runbook, that agent is **in scope** — add the runbook and flag it in the digest. **Coordinator structure is locked** (no additions or removals); agent **names and counts** within each coordinator's scope are at the writer's discretion.
+
+---
+
+## 5. Red line evaluation (required)
+
+A red line evaluation must exist for **both**:
+- Each **agent** — did the agent complete its task as expected?
+- Each **coordinator** — did the coordinator decompose, dispatch, and assemble correctly?
+
+This is the acceptance gate. Runbooks and prompts cannot ship without it.
+
+**Format:** a **checklist** or **pass/fail rubric**. Use the red-line block inside Krell's Campaign Architecture runbook as the template — copy the shape from:
+
+`https://github.com/krell-fpai/hmas-agent-end-to-end/blob/main/docs/runbooks/campaign_architecture/01-performance-diagnostic.md`
+
+(In repo terms, the red-line eval combines **Bounds** + **Kill-switch** + **Audit** — see the terminology issue draft for the mapping.)
+
+---
+
+## 6. Failure handling
+
+If an agent or coordinator fails because of **missing information** — whether from a tool or from another coordinator's output:
+
+1. The failure surfaces back to the Orchestrator.
+2. The Orchestrator updates the plan accordingly.
+3. Re-dispatches.
+
+This pattern assumes the Orchestrator supports **mid-run re-planning**. **Confirm with Steven.** (See open item 8.2.)
+
+---
+
+## 7. Job allocation
+
+Run book / prompt ownership by coordinator domain:
+
+| Coordinator | Owner | Notes |
+| --- | --- | --- |
+| `demand_master` | **Krell** | Demand & Content |
+| `content_master` | **Krell** | Demand & Content |
+| `supply_master` | **Bob** | Supply / measurement |
+| `measurement_master` | **Bob** | Supply / measurement |
+| `customer_master` | **Alice** | Customer |
+| `compliance_master` | **Haulee** | Compliance |
+| `margin_master` | **Abdul** | Margin coordinator |
+| `resolution_master` | **SUN** *(TBC)* | Unallocated — confirm owner |
+| Orchestrator (top-level) | **SUN** *(TBC)* | Unallocated — confirm owner |
+
+Steven is the project owner / decision-maker, not a writer — he is not listed as an owner above. `critic` (authority) does not need an owner.
+
+**Steven considerations** (Bob, 2026-05-27 — clarified as **two**, not three; original "three" phrasing pending confirmation):
+
+- (a) **No peer-to-peer dispatch.** An agent must not request another agent to work; a coordinator must not request another coordinator to work. All cross-dispatch goes through the Orchestrator. (Maps to §2 Rules #1 and #2.)
+- (b) **Holistic plan upfront.** The Orchestrator builds the full plan **before** any action is taken. (Maps to §2 Rule #3.)
+
+These are already locked in §2 Rules — writers should apply them consistently.
+
+**Run book format:** follow **Krell's existing format**. Writing process is at the writer's discretion. Reference example: `https://github.com/krell-fpai/hmas-agent-end-to-end/blob/main/docs/runbooks/campaign_architecture/01-performance-diagnostic.md`
+
+---
+
+## 8. Open items (to resolve before / during the build)
+
+### 8.1 Orchestrator gates — design not yet decided
+Whether the Orchestrator must pull data from gate agents as **minimum context before building a plan** is **not yet a consensus**. Candidate gates discussed:
+
+- `margin (gate)` — unit economics (break-even ACoS, target ACoS, profit floor)
+- `platform_risk (gate)` — account health issues that could block ad spend / new launches
+- `quality_compliance_triage (gate)` — yes/no on whether the product needs regulatory or IP review first
+
+The role of the `critic` authority (quality-check of the final assembled answer) is also under this open item.
+
+→ Decision needed before Orchestrator prompt is written. Owner: **TBD**.
+
+### 8.2 Memory model — undefined
+Memory will serve three purposes; the interaction between memory and orchestrator/coordinator/agent is **not yet defined**:
+
+1. **Audit log** — check what happened in prior runs.
+2. **In-process state** — pass intermediate results between steps (e.g., ACoS computed by step 1 reused by step 2).
+3. **Historical behavior** — for long-running goals (e.g., ACoS adjustment over weeks), avoid repeating prior actions, evaluate whether earlier adjustments worked.
+
+→ Owner / due date for the memory spec: **TBD**.
+
+### 8.3 Mid-run re-planning by Orchestrator — assumption, not confirmed
+The failure-handling flow (§6) assumes the Orchestrator can re-plan mid-execution. **Steven to confirm.** If only fixed plans at intake are supported, the failure-handling section needs a redesign.
+
+---
+
+## 9. Deliverables checklist (by Wednesday 2026-06-03 EOD)
+
+For each of the 22 agents (14 Tier A + 8 Tier B):
+- [ ] Runbook(s) in Krell's format — each runbook **must contain the agent ID + coordinator ID**
+- [ ] Tool list
+- [ ] Red line evaluation criteria (checklist or pass/fail rubric, per §5)
+
+For each of the 8 coordinators:
+- [ ] Coordinator prompt
+- [ ] Red line evaluation criteria
+
+For the Orchestrator (**designed AFTER all runbooks are delivered — post-2026-06-03**):
+- [ ] Prompt (pending gate-design decision §8.1)
+- [ ] Re-planning behavior on agent/coordinator failure (pending §8.3)
+
+---
+
+## 10. Reference
+
+- Final design: `HMAS-agent-restructure-v2-Alice-revision2.html`
+- Architectural rules source: orchestration pattern discussion 2026-05-25 (Steven Li / Bob)
+- Repo: https://github.com/Fundpark-AI/hmas-functions-hub (agent runtime lives in `src/agents/`)
+- Runbook format reference (Krell): https://github.com/krell-fpai/hmas-agent-end-to-end/blob/main/docs/runbooks/campaign_architecture/01-performance-diagnostic.md
+- Terminology alignment issue draft: `2026-05-27-github-issue-draft-terminology.md` (in this folder)
+
+---
+
+## 11. Unclear statements (to clarify before writer dispatch)
+
+These are the open points left after the 2026-05-27 clarification pass. Items resolved by Bob have already been folded into §1–§9 above.
+
+1. **§3 — "over-complicate" wording.** Original phrasing in prior dialog said "over-complicate"; current §3 interprets this as *keep-simple* ("scope deliberately narrow so a single prompt is enough"). **Bob to confirm** the intent is "keep coordinator scope narrow."
+
+2. **Two Steven considerations vs. three?** Bob clarified two considerations (no peer-to-peer dispatch; holistic plan upfront — see §7). Original phrasing was "three Steven roles need to be considered." **Bob to confirm** whether there is a third he hasn't surfaced, or whether the original "three" was inaccurate.
+
+3. **§4 / §9 — "runbook contains agent ID + coordinator ID" mechanism is open.** Bob has fixed the *requirement* (the IDs must be in the runbook file), but not the *form* (YAML frontmatter? top-of-file header? in-body tag?). For this round, writer's discretion; **a single convention should be picked before the next round** to make tooling possible.
+
+4. **§8.2 — Memory spec.** Owner and due date still **TBD**. Memory underpins (i) audit log, (ii) in-process state passing between steps, (iii) historical-behavior recall. Until specified, writers cannot describe how their agents read/write memory.
+
+5. **§8.3 — Mid-run re-planning by Orchestrator.** The failure-handling flow in §6 assumes the Orchestrator can re-plan mid-execution. **Steven to confirm.** If only fixed plans at intake are supported, §6 needs redesign.
