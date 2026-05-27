@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HMAS Agent Restructuring — v2 (Alice revision2) (Interactive)</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 24px 32px 48px;
+    color: #1a1a1a;
+    background: #fafafa;
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  [data-lang="en"] .zh-only { display: none !important; }
+  [data-lang="zh"] .en-only { display: none !important; }
+  .lang-bar {
+    display: flex; gap: 4px; justify-content: flex-end; margin-bottom: 8px;
+  }
+  .lang-btn {
+    background: #fff; border: 1px solid #ccc; border-radius: 4px;
+    padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: inherit;
+    color: #555;
+  }
+  .lang-btn:hover { background: #f0f0f0; }
+  .lang-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 28px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  .subtitle { color: #666; margin: 0 0 20px; font-size: 14px; }
+  .intro {
+    background: #fff; border: 1px solid #ddd; border-radius: 6px;
+    padding: 14px 18px; margin-bottom: 18px; font-size: 13.5px; line-height: 1.55;
+  }
+  .intro p { margin: 0 0 6px; }
+  .intro p:last-child { margin: 0; }
+  .controls {
+    display: flex; gap: 8px; margin: 12px 0; align-items: center; flex-wrap: wrap;
+  }
+  button {
+    background: #fff; border: 1px solid #999; border-radius: 4px;
+    padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  button:hover { background: #f0f0f0; }
+  .help-hint { color: #666; font-size: 12px; margin-left: 8px; }
+  .chart-wrap {
+    background: #fff; border: 1px solid #ddd; border-radius: 6px;
+    overflow-x: auto; overflow-y: visible; position: relative;
+    min-height: 200px;
+  }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 6px; font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .swatch { width: 14px; height: 14px; border: 1px solid #888; border-radius: 3px; }
+  svg { display: block; }
+  .node circle { cursor: pointer; stroke-width: 1.5px; }
+  .node text {
+    font-size: 12px; pointer-events: none; user-select: none;
+    paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round;
+  }
+  .node--internal circle { stroke-width: 2px; }
+  .link { fill: none; stroke: #c0c0c0; stroke-width: 1.5px; }
+  .tooltip {
+    position: fixed; background: #fff; border: 1px solid #999; border-radius: 4px;
+    padding: 8px 10px; font-size: 12px; line-height: 1.4; max-width: 280px;
+    pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; display: none;
+  }
+  .view-tabs { display: flex; gap: 2px; margin: 16px 0 0; border-bottom: 1px solid #ccc; }
+  .tab-btn {
+    background: #eee; border: 1px solid #ccc; border-bottom: none;
+    border-radius: 6px 6px 0 0; padding: 8px 18px; font-size: 13px;
+    cursor: pointer; font-family: inherit; margin-bottom: -1px;
+  }
+  .tab-btn.active { background: #fff; border-bottom: 1px solid #fff; font-weight: 600; }
+  .tab-btn:hover:not(.active) { background: #e4e4e4; }
+  .view { display: none; }
+  .view.active { display: block; }
+  table.bundle-table {
+    width: 100%; border-collapse: collapse;
+    background: #fff; border: 1px solid #ddd; border-radius: 0 6px 6px 6px;
+    margin-top: -1px; font-size: 13px;
+  }
+  table.bundle-table th {
+    background: #f0f0f0; padding: 8px 10px; text-align: left;
+    border-bottom: 1px solid #ccc; cursor: pointer; user-select: none; font-weight: 600;
+  }
+  table.bundle-table th:hover { background: #e4e4e4; }
+  table.bundle-table th.sort-asc::after { content: ' ▲'; color: #666; }
+  table.bundle-table th.sort-desc::after { content: ' ▼'; color: #666; }
+  table.bundle-table td { padding: 6px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+  table.bundle-table tr:hover td { background: #f8f8f8; }
+  table.bundle-table tr.row-coord td { background: #eef4fa; font-weight: 600; }
+  table.bundle-table tr.row-auth td { background: #f4f8fc; }
+  table.bundle-table tr.row-coord:hover td { background: #dfeaf4; }
+  table.bundle-table tr.row-auth:hover td { background: #e8eff7; }
+  .tier-badge {
+    display: inline-block; padding: 1px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; min-width: 18px; text-align: center;
+  }
+  .tier-A { background: #d4f4dd; color: #1a5c2e; }
+  .tier-B { background: #fff2cc; color: #735300; }
+  .tier-C { background: #fadcd9; color: #7a2e26; }
+  td.cell-name { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  td.cell-coord { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: #555; }
+  td.cell-owns { color: #444; }
+  .tooltip .tt-name { font-weight: 600; margin-bottom: 4px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .tooltip .tt-meta { color: #666; font-size: 11px; margin-bottom: 4px; }
+  .tooltip .tt-owns { color: #333; }
+  .notes {
+    background: #fffbe8; border-left: 3px solid #d4a017;
+    padding: 12px 16px; margin: 16px 0; font-size: 13px; line-height: 1.5;
+  }
+  .notes ul { margin: 6px 0 0 18px; padding: 0; }
+  .notes li { margin: 4px 0; }
+  .stats { display: flex; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+  .stat {
+    background: #fff; border: 1px solid #ddd; border-radius: 6px;
+    padding: 8px 14px; flex: 1; min-width: 120px;
+  }
+  .stat .num { font-size: 22px; font-weight: 600; }
+  .stat .label { font-size: 11px; color: #666; margin-top: 2px; }
+  .changelog {
+    background: #f0f7ff; border-left: 3px solid #3b6ea5;
+    padding: 12px 16px; margin: 16px 0; font-size: 13px; line-height: 1.55;
+  }
+  .changelog ul { margin: 6px 0 0 18px; padding: 0; }
+  .changelog li { margin: 4px 0; }
+  footer {
+    margin-top: 28px; padding-top: 14px; border-top: 1px solid #ddd;
+    font-size: 11.5px; color: #888;
+  }
+</style>
+</head>
+<body data-lang="en">
+
+<div class="lang-bar">
+  <button class="lang-btn active" id="lang-en-btn" onclick="setLang('en')">EN</button>
+  <button class="lang-btn" id="lang-zh-btn" onclick="setLang('zh')">中文</button>
+</div>
+
+<h1>
+  <span class="en-only">HMAS Agent Restructuring: v2 (Alice revision2)</span>
+  <span class="zh-only">HMAS Agent 体系重组：v2（Alice revision2）</span>
+</h1>
+<p class="subtitle">
+  <span class="en-only">8 Master agents, 4 authorities. Pricing split out as standalone. customer_service merges pre-/during-/post-sale. Click a Master agent (blue node) to expand. Hover for details.</span>
+  <span class="zh-only">8 个 Master agent、4 个 Authority。定价独立为单独板块，客服合并为全链路 customer_service。点击 Master agent（蓝色节点）展开。悬停查看详情。</span>
+</p>
+
+<div class="intro en-only">
+  <p><strong>What this is:</strong> Alice's revision of the v2 proposal. <code>margin_master</code> anchors pricing &amp; promotions; gate agents (margin, platform_risk, quality_compliance_triage) sit under orchestrator as authorities AND under their domain Master agents as specialists.</p>
+  <p><strong>Changes from v2:</strong>
+    <br>&rarr; <code>margin_master</code> (new, ex pricing_coordinator): margin_specialist + pricing_strategist (renamed) + promotion_strategist + profitabilty_fee_auditor. S&amp;S folded into promotion_strategist.
+    <br>&rarr; <code>demand_master</code>: gains <code>buy_box_specialist</code> (merges featured_offer_diagnostician + repricing_triage).
+    <br>&rarr; <code>compliance_master</code>: adds quality_compliance_triage + platform_risk as specialists.
+    <br>&rarr; <code>supply_master</code>: reduced to supplier_lead_time + fba_inventory_strategist.
+    <br>&rarr; <code>customer_master</code>: customer_service + post_purchase_returns merged.
+    <br>&rarr; <strong>Gates:</strong> margin (gate), platform_risk (gate), quality_compliance_triage (gate) remain as orchestrator authorities — accessible to all coordinators.
+  </p>
+  <p><strong>How to read:</strong> orchestrator at top, then coordinators, then specialists fan out. Gates at orchestrator level. Master agents are <strong>blue</strong>. Authorities are <strong>blue</strong> (smaller). Specialists colour-coded by tier (green / yellow / red).</p>
+  <p><strong>Source:</strong> v2 document + Alice's categorisation feedback.</p>
+</div>
+<div class="intro zh-only">
+  <p><strong>这是什么：</strong>Alice 对 v2 提案的修订版。<code>margin_master</code> 作为定价中枢；gate agent（margin、platform_risk、quality_compliance_triage）既作为 orchestrator 直属 authority，也在对应 domain coordinator 下担任 specialist。</p>
+  <p><strong>相比 v2 的改动：</strong>
+    <br>&rarr; <code>margin_master</code>（新增，原 pricing_coordinator）：margin_specialist + pricing_strategist（改名）+ promotion_strategist + profitabilty_fee_auditor。S&amp;S 并入 promotion_strategist。
+    <br>&rarr; <code>demand_master</code>：新增 <code>buy_box_specialist</code>（合并 featured_offer_diagnostician + repricing_triage）。
+    <br>&rarr; <code>compliance_master</code>：新增 quality_compliance_triage + platform_risk 为 specialist。
+    <br>&rarr; <code>supply_master</code>：精简为 supplier_lead_time + fba_inventory_strategist。
+    <br>&rarr; <code>customer_master</code>：customer_service + post_purchase_returns 合并。
+    <br>&rarr; <strong>Gate：</strong>margin (gate)、platform_risk (gate)、quality_compliance_triage (gate) 仍为 orchestrator 直属 authority，全 coordinator 可调用。
+  </p>
+  <p><strong>如何阅读：</strong>顶部 orchestrator，gate 直属其下。Master agent 蓝色，Authority 蓝色（略小）。专家按级别着色（绿/黄/红）。</p>
+  <p><strong>来源：</strong>v2 文档 + Alice 分类讨论反馈。</p>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="num">30</div><div class="label"><span class="en-only">Total agents (A+B+C)</span><span class="zh-only">Agent 总数（A+B+C）</span></div></div>
+  <div class="stat"><div class="num">14</div><div class="label"><span class="en-only">Tier A: buildable now</span><span class="zh-only">A 级 specialist + authority</span></div></div>
+  <div class="stat"><div class="num">8</div><div class="label"><span class="en-only">Tier B: needs portal eng</span><span class="zh-only">B 级 specialist</span></div></div>
+  <div class="stat"><div class="num">8</div><div class="label"><span class="en-only">Tier C: aspirational</span><span class="zh-only">C 级 specialist</span></div></div>
+  <div class="stat"><div class="num">8</div><div class="label"><span class="en-only">Master agents</span><span class="zh-only">Master agent</span></div></div>
+  <div class="stat"><div class="num">4</div><div class="label"><span class="en-only">Authorities (gates)</span><span class="zh-only">Authority（gate）</span></div></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="swatch" style="background:#3b6ea5"></span> <span class="en-only">Orchestrator / Master agent / authority</span><span class="zh-only">Orchestrator / Master agent / authority</span></div>
+  <div class="legend-item"><span class="swatch" style="background:#5ca36f"></span> <span class="en-only">Tier A: buildable now</span><span class="zh-only">A 级：现可构建</span></div>
+  <div class="legend-item"><span class="swatch" style="background:#e0b020"></span> <span class="en-only">Tier B: needs portal engineering</span><span class="zh-only">B 级：需 portal 端工程</span></div>
+  <div class="legend-item"><span class="swatch" style="background:#cc5045"></span> <span class="en-only">Tier C: aspirational</span><span class="zh-only">C 级：远期目标</span></div>
+  <div class="legend-item"><span class="en-only">✅ existing &middot; 🔄 renamed &middot; 🔪 split &middot; ⭐ new &middot; 🔀 merged</span><span class="zh-only">✅ 已有 &middot; 🔄 改名 &middot; 🔪 拆分 &middot; ⭐ 新增 &middot; 🔀 合并</span></div>
+</div>
+
+<div class="view-tabs">
+  <button class="tab-btn active" id="tab-chart" onclick="showView('chart')">
+    <span class="en-only">Chart view</span><span class="zh-only">图表视图</span>
+  </button>
+  <button class="tab-btn" id="tab-table" onclick="showView('table')">
+    <span class="en-only">Table view</span><span class="zh-only">表格视图</span>
+  </button>
+</div>
+
+<div id="view-chart" class="view active">
+  <div class="controls">
+    <button onclick="expandAll()"><span class="en-only">Expand all</span><span class="zh-only">全部展开</span></button>
+    <button onclick="collapseAll()"><span class="en-only">Collapse all</span><span class="zh-only">全部收起</span></button>
+    <button onclick="resetView()"><span class="en-only">Reset</span><span class="zh-only">重置</span></button>
+    <span class="help-hint">
+      <span class="en-only">Click any Master agent (blue node) to toggle its specialists. Filled circle = collapsed, hollow = expanded.</span>
+      <span class="zh-only">点击 Master agent（蓝色节点）切换其下属专家的显示。实心圆 = 已收起，空心圆 = 已展开。</span>
+    </span>
+  </div>
+
+  <div class="chart-wrap">
+    <svg id="chart" width="100%" height="100%"></svg>
+  </div>
+</div>
+
+<div id="view-table" class="view">
+  <table class="bundle-table" id="bundle-table">
+    <thead>
+      <tr>
+        <th data-sort="state"><span class="en-only">State</span><span class="zh-only">状态</span></th>
+        <th data-sort="name"><span class="en-only">Bundle</span><span class="zh-only">Bundle</span></th>
+        <th data-sort="coord"><span class="en-only">Under Master agent</span><span class="zh-only">归属 Master agent</span></th>
+        <th data-sort="tier"><span class="en-only">Tier</span><span class="zh-only">级别</span></th>
+        <th data-sort="type"><span class="en-only">Type</span><span class="zh-only">类型</span></th>
+        <th data-sort="owns"><span class="en-only">Owns</span><span class="zh-only">职责</span></th>
+      </tr>
+    </thead>
+    <tbody id="bundle-tbody"></tbody>
+  </table>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<h2>
+  <span class="en-only">Changelog (Alice revision vs original v2)</span>
+  <span class="zh-only">改动说明（Alice 修订 vs 原始 v2）</span>
+</h2>
+<div class="changelog en-only">
+  <ul>
+    <li><strong>New: pricing_coordinator</strong> with list_price_strategist, promotion_strategist, profitabilty_fee_auditor. Subscribe &amp; Save folded into promotion_strategist (no standalone specialist).</li>
+    <li><strong>New: buy_box_specialist</strong> under demand_master — merges featured_offer_diagnostician + repricing_triage (both ex-supply). Runs continuously, not only when Buy Box is lost.</li>
+    <li><strong>Cut:</strong> subscribe_and_save_manager (now a sub-scenario of promotion_strategist).</li>
+    <li><strong>Downgraded to C tier:</strong> imagery_strategist, brand_store_and_posts_strategist (not building yet — aspirational), import_compliance_specialist, appeal_specialist, dispute_and_ip_response.</li>
+    <li><strong>Upgraded to A tier:</strong> market_research (foundational for many decisions).</li>
+    <li><strong>Moved:</strong> list_price_strategist supply → pricing; promotion_strategist demand → pricing; profitabilty_fee_auditor content → pricing.</li>
+    <li><strong>Merged:</strong> featured_offer_diagnostician + repricing_triage → buy_box_specialist; customer_service + post_purchase_returns → customer_service (full buyer journey).</li>
+    <li><strong>Supply:</strong> now only supplier_lead_time + fba_inventory_strategist (pure fulfillment).</li>
+    <li><strong>Content:</strong> listing_specialist + imagery_strategist (C tier).</li>
+  </ul>
+</div>
+<div class="changelog zh-only">
+  <ul>
+    <li><strong>新增 pricing_coordinator：</strong>下辖 list_price_strategist、promotion_strategist、profitability_fee_auditor。Subscribe &amp; Save 合并进 promotion_strategist 作为子场景。</li>
+    <li><strong>新增 buy_box_specialist：</strong>归属 demand_master，合并原 supply 下 featured_offer_diagnostician + repricing_triage。持续运行，不仅限于购物车丢失后才触发。</li>
+    <li><strong>删除：</strong>subscribe_and_save_manager（已并入 promotion_strategist 作为子场景）。</li>
+    <li><strong>降为 C 级：</strong>imagery_strategist、brand_store_and_posts_strategist（图片工具暂不开发，远期目标）、import_compliance_specialist、appeal_specialist、dispute_and_ip_response。</li>
+    <li><strong>升为 A 级：</strong>market_research（市场调研为多项决策基础）。</li>
+    <li><strong>迁移：</strong>list_price_strategist supply → pricing；promotion_strategist demand → pricing；profitability_fee_auditor content → pricing。</li>
+    <li><strong>合并：</strong>featured_offer_diagnostician + repricing_triage → buy_box_specialist；customer_service + post_purchase_returns → customer_service（全链路客服）。</li>
+    <li><strong>Supply：</strong>精简为 supplier_lead_time + fba_inventory_strategist（纯履约）。</li>
+    <li><strong>Content：</strong>listing_specialist + imagery_strategist（C 级）。</li>
+  </ul>
+</div>
+
+<h2><span class="en-only">Out of scope</span><span class="zh-only">范围之外</span></h2>
+<p style="font-size:13px;line-height:1.5;" class="en-only">Seller Central (3P) only. Vendor Central (1P) is a separate roster. AVS, CARS dispute workflow, direct fulfillment compliance, and Vendor Central pricing are intentionally not included here.</p>
+<p style="font-size:13px;line-height:1.5;" class="zh-only">仅覆盖 Seller Central（3P）。Vendor Central（1P）为独立体系。AVS、CARS 纠纷流程、Direct Fulfillment 合规、Vendor Central 定价等不在此范围。</p>
+<p style="font-size:13px;line-height:1.5;" class="en-only">Imagery agents (imagery_strategist, brand_store_and_posts_strategist) retained at C tier — aspirational, not building yet. subscribe_and_save_manager folded into promotion_strategist as a sub-scenario.</p>
+<p style="font-size:13px;line-height:1.5;" class="zh-only">图片相关 agent（imagery_strategist、brand_store_and_posts_strategist）保留为 C 级远期目标，暂不开发。subscribe_and_save_manager 已并入 promotion_strategist 子场景。</p>
+
+<footer>
+  <span class="en-only">
+    v2 (Alice revision) — forked from v2 (2026-05-24) with categorisation refinements (2026-05-25).
+    Chart powered by <a href="https://d3js.org">D3.js</a> via CDN.
+  </span>
+  <span class="zh-only">
+    v2（Alice 修订）— 基于 v2（2026-05-24），经分类讨论调整（2026-05-25）。
+    图表使用 <a href="https://d3js.org">D3.js</a>（CDN）。
+  </span>
+</footer>
+
+<script>
+const TIER_COLOUR = {
+  A: '#5ca36f',
+  B: '#e0b020',
+  C: '#cc5045'
+};
+const COORD_COLOUR = '#3b6ea5';
+const AUTHORITY_COLOUR = '#7aa3cf';
+
+// ── Data: v3 tree ───────────────────────────────────────────────
+const data = {
+  name: "orchestrator",
+  emoji: "✅",
+  tier: "A",
+  type: "coord",
+  owns: "Routes the seller's question to the right specialist(s) and assembles their outputs into one answer.",
+  owns_zh: "将卖家的问题路由到合适的专家 Agent，并把它们的输出整合成一份回答。",
+  children: [
+    {
+      name: "critic", emoji: "✅", tier: "A", type: "auth",
+      owns: "Quality-checks the orchestrator's answer before it reaches the seller. Catches gaps and errors.",
+      owns_zh: "在 orchestrator 的回答交到卖家之前做质量核验。捕捉缺漏与错误。"
+    },
+    {
+      name: "margin (gate)", emoji: "✅", tier: "A", type: "auth",
+      owns: "Computes the seller's unit economics: break-even ACoS, target ACoS, profit floor. Other agents call this for the numbers.",
+      owns_zh: "计算卖家的单位经济模型：盈亏平衡 ACoS、目标 ACoS、利润底线。其他 Agent 通过这里获取关键数字。"
+    },
+    {
+      name: "platform_risk (gate)", emoji: "✅", tier: "A", type: "auth",
+      owns: "Checks the seller's Amazon account health for issues that could block ad spend or new launches.",
+      owns_zh: "检查卖家亚马逊账户健康度，识别可能阻碍广告投放或新品上架的问题。"
+    },
+    {
+      name: "quality_compliance_triage (gate)", emoji: "🔄", tier: "A", type: "auth",
+      owns: "Quick yes/no: does this product need regulatory or IP review before we proceed?",
+      owns_zh: "快速是/否判定：这个产品在推进前是否需要做合规或知识产权审查？"
+    },
+    {
+      name: "demand_master", emoji: "✅", tier: "B", type: "coord",
+      owns: "Coordinates everything that drives traffic to the seller's listings: ads, organic SEO, launches, and Buy Box competitiveness.",
+      owns_zh: "统筹所有为卖家 Listing 引流的工作：广告、自然 SEO、新品上架，以及 Buy Box 竞争力。",
+      children: [
+        { name: "keyword_research", emoji: "✅", tier: "A", type: "spec", owns: "Finds the search terms shoppers actually use, and which competitors are winning them.", owns_zh: "找出消费者实际使用的搜索词，以及哪些竞品在这些词上占优。" },
+        { name: "campaign_architecture", emoji: "✅", tier: "A", type: "spec", owns: "Designs and tunes Amazon ad campaigns: which types to run, how to structure them, how to spend.", owns_zh: "设计和调优亚马逊广告活动：选什么类型、如何组织结构、如何分配预算。" },
+        { name: "organic_seo_strategist", emoji: "⭐", tier: "B", type: "spec", owns: "Improves the listing's rank in unpaid Amazon search and AI-driven discovery surfaces (Alexa for Shopping).", owns_zh: "提升 Listing 在亚马逊自然搜索及 AI 发现界面（Alexa for Shopping）中的排名。" },
+        { name: "launch_sequencer", emoji: "⭐", tier: "B", type: "spec", owns: "Walks a brand-new product through its first 30 days on Amazon: pre-launch checklist through honeymoon pacing.", owns_zh: "陪跑全新商品在亚马逊上的前 30 天：从上架前清单到蜜月期节奏。" },
+        { name: "buy_box_specialist", emoji: "🔀", tier: "B", type: "spec", owns: "Diagnoses Buy Box loss and continuously tunes repricing rules to win and hold the Featured Offer. Merges the old featured_offer_diagnostician + repricing_triage into one agent that runs proactively — not just when the Buy Box is lost.", owns_zh: "诊断 Buy Box 丢失原因并持续调优调价规则以争取和保持 Featured Offer。将原 featured_offer_diagnostician 与 repricing_triage 合并为一个持续运行的 Agent，而非仅在丢失后才触发。" },
+        { name: "brand_store_and_posts_strategist", emoji: "⭐", tier: "C", type: "spec", owns: "Builds and runs the brand's Amazon storefront and Posts feed as traffic destinations.", owns_zh: "搭建并运营品牌的亚马逊 Brand Store 与 Posts 信息流作为流量落地。" }
+      ]
+    },
+    {
+      name: "supply_master", emoji: "⭐", tier: "B", type: "coord",
+      owns: "Coordinates inventory and fulfillment. Pure supply chain — pricing and Buy Box have moved to demand_master and pricing_coordinator.",
+      owns_zh: "统筹库存与履约。纯供给链——定价与 Buy Box 已分别移至 demand_master 和 pricing_coordinator。",
+      children: [
+        { name: "supplier_lead_time", emoji: "✅", tier: "B", type: "spec", owns: "Decides how much to reorder and when, given supplier lead times and demand forecasts.", owns_zh: "在供应商交货周期和需求预测下，决定补货数量与时机。" },
+        { name: "fba_inventory_strategist", emoji: "⭐", tier: "B", type: "spec", owns: "Manages FBA warehouse capacity, storage fees, removal orders, and AWD planning.", owns_zh: "管理 FBA 仓储容量、仓储费用、移除订单和 AWD 规划。" }
+      ]
+    },
+    {
+      name: "content_master", emoji: "⭐", tier: "B", type: "coord",
+      owns: "Coordinates listing copywriting. Imagery and profitability auditing have moved out (imagery deferred, profitability → pricing_coordinator).",
+      owns_zh: "统筹 Listing 文案撰写。图片素材和盈利审计已移出（图片暂缓，盈利审计 → pricing_coordinator）。",
+      children: [
+        { name: "listing_specialist", emoji: "⭐", tier: "B", type: "spec", owns: "Writes and revises product listing copy (title, bullets, description, A+). Fixes suppressed or low-quality listings.", owns_zh: "撰写并优化商品 Listing 文案（标题、要点、描述、A+），修复被屏蔽或低质量的 Listing。" },
+        { name: "imagery_strategist", emoji: "⭐", tier: "C", type: "spec", owns: "Specs and briefs product imagery: main image, infographics, lifestyle photos, video.", owns_zh: "规划并撰写商品图素材简报：主图、信息图、场景图、视频。" }
+      ]
+    },
+    {
+      name: "customer_master*", emoji: "⭐", tier: "A", type: "coord",
+      owns: "Coordinates all buyer-facing communication: pre-sale inquiries, order tracking, and post-sale returns/refunds.",
+      owns_zh: "统筹面向买家的全链路沟通：售前咨询、售中订单跟踪、售后退货退款。",
+      children: [
+        { name: "customer_service", emoji: "🔀", tier: "A", type: "spec", owns: "Handles all buyer-facing communication across the full journey: pre-sale product inquiries, during-sale order tracking & modifications, post-sale returns, refunds, and A-to-z claims.", owns_zh: "处理买家全链路沟通：售前产品咨询、售中订单状态与修改、售后退货退款与 A-to-z 处理。" }
+      ]
+    },
+    {
+      name: "compliance_master", emoji: "⭐", tier: "A", type: "coord",
+      owns: "Coordinates regulatory and IP compliance specialists.",
+      owns_zh: "统筹合规与知识产权领域的专家。",
+      children: [
+        { name: "quality_compliance_triage", emoji: "🔄", tier: "A", type: "spec", owns: "Quick yes/no: does this product need regulatory or IP review before we proceed?", owns_zh: "快速是/否判定：这个产品在推进前是否需要做合规或知识产权审查？" },
+        { name: "platform_risk", emoji: "✅", tier: "A", type: "spec", owns: "Checks the seller's Amazon account health for issues that could block ad spend or new launches.", owns_zh: "检查卖家亚马逊账户健康度，识别可能阻碍广告投放或新品上架的问题。" },
+        { name: "product_safety_specialist", emoji: "⭐", tier: "A", type: "spec", owns: "Handles CPSC, FDA, FCC, EPA category rules. Testing protocols, lab certification, recall avoidance.", owns_zh: "处理 CPSC、FDA、FCC、EPA 各品类规则。涵盖检测流程、实验室认证、召回规避。" },
+        { name: "ip_defense_specialist", emoji: "⭐", tier: "A", type: "spec", owns: "Defends against IP complaints, brand impersonation, and design-patent risks.", owns_zh: "应对 IP 投诉、品牌冒用与外观专利风险的防御。" },
+        { name: "import_compliance_specialist", emoji: "⭐", tier: "C", type: "spec", owns: "Manages HTS codes, country-of-origin declarations, and compliance documents for imported products.", owns_zh: "管理 HTS 编码、原产地申报与进口商品合规文件。" },
+        { name: "hazmat_battery_specialist", emoji: "⭐", tier: "A", type: "spec", owns: "Handles dangerous-goods classifications, lithium battery rules, and hazmat shipping.", owns_zh: "处理危险品分类、锂电池规则与危险品运输要求。" }
+      ]
+    },
+    {
+      name: "resolution_master", emoji: "⭐", tier: "A", type: "coord",
+      owns: "Coordinates appeals and dispute responses when something needs fixing with Amazon.",
+      owns_zh: "在需要向亚马逊申诉或回应纠纷时进行统筹。",
+      children: [
+        { name: "appeal_specialist", emoji: "⭐", tier: "C", type: "spec", owns: "Drafts Plan-of-Action narratives and assembles evidence for account or listing reinstatement appeals.", owns_zh: "撰写 Plan of Action 申诉陈述，并为账户或 Listing 复活整理证据材料。" },
+        { name: "dispute_and_ip_response", emoji: "⭐", tier: "C", type: "spec", owns: "Drafts responses to A-to-z claims, chargebacks, and incoming IP complaints from third parties.", owns_zh: "撰写对 A-to-z 索赔、拒付以及第三方 IP 投诉的回应函。" }
+      ]
+    },
+    {
+      name: "measurement_master", emoji: "⭐", tier: "B", type: "coord",
+      owns: "Coordinates analytics, attribution, market intelligence, and experiment design.",
+      owns_zh: "统筹数据分析、归因、市场情报与实验设计。",
+      children: [
+        { name: "business_intelligence_analyst", emoji: "⭐", tier: "A", type: "spec", owns: "Reads Brand Analytics, Business Reports, and Voice of the Customer to surface insights.", owns_zh: "解读 Brand Analytics、Business Reports 与 Voice of the Customer，输出洞察。" },
+        { name: "market_research", emoji: "✅", tier: "A", type: "spec", owns: "Sizes new categories and competitive landscapes. Tracks competitors over time.", owns_zh: "测算新品类规模与竞争格局。持续追踪竞品动态。" },
+        { name: "amc_analyst", emoji: "⭐", tier: "C", type: "spec", owns: "Runs custom Amazon Marketing Cloud queries to answer complex measurement questions.", owns_zh: "运行 Amazon Marketing Cloud 自定义查询，回答复杂的度量问题。" },
+        { name: "attribution_analyst", emoji: "⭐", tier: "C", type: "spec", owns: "Tracks off-Amazon traffic (TikTok, influencer, email) via Amazon Attribution and Brand Referral Bonus.", owns_zh: "通过 Amazon Attribution 和 Brand Referral Bonus 追踪站外流量（TikTok、网红、邮件）。" },
+        { name: "review_acquisition_strategist", emoji: "⭐", tier: "A", type: "spec", owns: "Manages Vine enrollment, Request a Review timing, and other Amazon-compliant review tactics.", owns_zh: "管理 Vine 计划、Request a Review 时机以及其他符合亚马逊规范的评论获取策略。" },
+        { name: "experiment_strategist", emoji: "⭐", tier: "B", type: "spec", owns: "Designs and reads Manage Your Experiments A/B tests on titles, A+ content, and main images.", owns_zh: "设计并解读 Manage Your Experiments 的 A/B 实验（标题、A+ 内容、主图）。" }
+      ]
+    },
+    {
+      name: "margin_master", emoji: "⭐", tier: "B", type: "coord",
+      owns: "Coordinates pricing, promotions, and fee auditing — everything that determines what the buyer pays and what the seller earns. Anchored by margin (gate) as the pricing foundation.",
+      owns_zh: "统筹定价、促销与费用审计——决定买家付多少钱、卖家赚多少钱。以 margin (gate) 为定价基础。",
+      children: [
+        { name: "margin_specialist", emoji: "✅", tier: "A", type: "spec", owns: "Computes the seller's unit economics: break-even ACoS, target ACoS, profit floor. Other agents call this for the numbers.", owns_zh: "计算卖家的单位经济模型：盈亏平衡 ACoS、目标 ACoS、利润底线。其他 Agent 通过这里获取关键数字。" },
+        { name: "pricing_strategist", emoji: "🔪", tier: "B", type: "spec", owns: "Sets the right base price and adjusts it across marketplaces using margin, psychology, and competitor signals.", owns_zh: "基于毛利、消费心理与竞品信号，制定基础售价并在各站点协同调整。" },
+        { name: "promotion_strategist", emoji: "🔄", tier: "A", type: "spec", owns: "Decides when to run discounts, coupons, Lightning Deals, and Brand-Tailored Promotions — and how deep to go. Also covers Subscribe & Save discount-tier strategy and retention monitoring.", owns_zh: "决定何时投放折扣、优惠券、Lightning Deals 和 Brand-Tailored Promotions，以及力度多大。同时覆盖 Subscribe & Save 的折扣层级策略与订阅留存监控。" },
+        { name: "profitability_fee_auditor", emoji: "⭐", tier: "A", type: "spec", owns: "Audits FBA fees, referral fee tiers, and silent deductions that quietly erode margin.", owns_zh: "审计 FBA 费用、佣金层级以及悄悄侵蚀利润的隐性扣款。" }
+      ]
+    },
+    {
+      name: "multi_marketplace_strategist*", emoji: "⭐", tier: "C", type: "spec",
+      owns: "Plans new marketplace launches (Pan-EU, Remote Fulfillment with FBA) and cross-marketplace coordination.",
+      owns_zh: "规划新站点上架（Pan-EU、Remote Fulfillment with FBA）和跨站点协同。"
+    }
+  ]
+};
+
+function currentLang() { return document.body.dataset.lang || 'en'; }
+function ownsForLang(d) {
+  return currentLang() === 'zh' ? (d.owns_zh || d.owns) : d.owns;
+}
+
+// ── D3 collapsible tree ───────────────────────────────────────────────
+const margin = { top: 30, right: 280, bottom: 30, left: 80 };
+let i = 0;
+let root;
+
+const svg = d3.select("#chart");
+const g = svg.append("g")
+  .attr("transform", `translate(${margin.left},${margin.top})`);
+
+const tooltip = d3.select("#tooltip");
+
+function resize() {
+  const wrap = document.querySelector('.chart-wrap');
+  svg.attr("width", wrap.clientWidth);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const treemap = d3.tree().nodeSize([28, 320]);
+
+root = d3.hierarchy(data, d => d.children);
+root.x0 = 0;
+root.y0 = 0;
+
+root.descendants().forEach(d => {
+  if (d.data.type === 'coord' && d.depth >= 1 && d.children) {
+    d._children = d.children;
+    d.children = null;
+  }
+});
+
+function update(source) {
+  const treeData = treemap(root);
+  const nodes = treeData.descendants();
+  const links = treeData.descendants().slice(1);
+
+  let xMin = Infinity, xMax = -Infinity;
+  nodes.forEach(d => {
+    if (d.x < xMin) xMin = d.x;
+    if (d.x > xMax) xMax = d.x;
+  });
+  const height = (xMax - xMin) + margin.top + margin.bottom + 40;
+  svg.attr("height", Math.max(220, height));
+  g.attr("transform", `translate(${margin.left},${margin.top - xMin})`);
+
+  const node = g.selectAll('g.node').data(nodes, d => d.id || (d.id = ++i));
+
+  const nodeEnter = node.enter().append('g')
+    .attr('class', d => 'node ' + (d.children || d._children ? 'node--internal' : 'node--leaf'))
+    .attr('transform', d => `translate(${source.y0},${source.x0})`)
+    .on('click', click)
+    .on('mouseover', (event, d) => {
+      const tierLabel = currentLang() === 'zh' ? '级别' : 'tier';
+      const typeLabel = currentLang() === 'zh' ? '类型' : 'type';
+      tooltip
+        .style('display', 'block')
+        .html(`
+          <div class="tt-name">${d.data.emoji} ${d.data.name}</div>
+          <div class="tt-meta">${tierLabel}: ${d.data.tier} &middot; ${typeLabel}: ${typeLabelFor(d.data.type)}</div>
+          <div class="tt-owns">${ownsForLang(d.data) || ''}</div>
+        `);
+    })
+    .on('mousemove', (event) => {
+      tooltip.style('left', (event.clientX + 14) + 'px').style('top', (event.clientY + 14) + 'px');
+    })
+    .on('mouseout', () => tooltip.style('display', 'none'));
+
+  nodeEnter.append('circle')
+    .attr('r', 1e-6)
+    .style('fill', d => fillForNode(d))
+    .style('stroke', d => strokeForNode(d));
+
+  nodeEnter.append('text')
+    .attr('dy', '0.32em')
+    .attr('x', 12)
+    .attr('text-anchor', 'start')
+    .text(d => `${d.data.emoji} ${d.data.name}`)
+    .style('font-weight', d => (d.data.type === 'coord' || d.data.type === 'auth' ? 600 : 400));
+
+  const nodeUpdate = nodeEnter.merge(node);
+
+  nodeUpdate.transition().duration(250)
+    .attr('transform', d => `translate(${d.y},${d.x})`);
+
+  nodeUpdate.select('circle')
+    .attr('r', d => (d.data.type === 'coord' ? 8 : d.data.type === 'auth' ? 6 : 5))
+    .style('fill', d => fillForNode(d))
+    .style('stroke', d => strokeForNode(d));
+
+  const nodeExit = node.exit().transition().duration(250)
+    .attr('transform', d => `translate(${source.y},${source.x})`)
+    .remove();
+  nodeExit.select('circle').attr('r', 1e-6);
+  nodeExit.select('text').style('fill-opacity', 1e-6);
+
+  const link = g.selectAll('path.link').data(links, d => d.id);
+
+  const linkEnter = link.enter().insert('path', 'g')
+    .attr('class', 'link')
+    .attr('d', d => {
+      const o = { x: source.x0, y: source.y0 };
+      return diagonal(o, o);
+    });
+
+  const linkUpdate = linkEnter.merge(link);
+
+  linkUpdate.transition().duration(250)
+    .attr('d', d => diagonal(d, d.parent));
+
+  link.exit().transition().duration(250)
+    .attr('d', d => {
+      const o = { x: source.x, y: source.y };
+      return diagonal(o, o);
+    })
+    .remove();
+
+  nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+}
+
+function diagonal(s, d) {
+  return `M ${s.y} ${s.x}
+          C ${(s.y + d.y) / 2} ${s.x},
+            ${(s.y + d.y) / 2} ${d.x},
+            ${d.y} ${d.x}`;
+}
+
+function fillForNode(d) {
+  if (d.data.type === 'coord') {
+    return d._children ? COORD_COLOUR : '#fff';
+  }
+  if (d.data.type === 'auth') return AUTHORITY_COLOUR;
+  return TIER_COLOUR[d.data.tier] || '#ccc';
+}
+function strokeForNode(d) {
+  if (d.data.type === 'coord') return COORD_COLOUR;
+  if (d.data.type === 'auth') return COORD_COLOUR;
+  const c = TIER_COLOUR[d.data.tier] || '#888';
+  return c;
+}
+
+function click(event, d) {
+  if (d.children) {
+    d._children = d.children;
+    d.children = null;
+  } else if (d._children) {
+    d.children = d._children;
+    d._children = null;
+  } else {
+    return;
+  }
+  update(d);
+}
+
+function expandAll() {
+  root.descendants().forEach(d => {
+    if (d._children) { d.children = d._children; d._children = null; }
+  });
+  update(root);
+}
+function collapseAll() {
+  root.descendants().forEach(d => {
+    if (d.depth >= 1 && d.children && d.data.type === 'coord') {
+      d._children = d.children;
+      d.children = null;
+    }
+  });
+  update(root);
+}
+function resetView() {
+  collapseAll();
+}
+
+update(root);
+
+// ── Table view ────────────────────────────────────────────────────────
+const flatList = [];
+function flatten(node, parentName) {
+  flatList.push({
+    name: node.name,
+    emoji: node.emoji,
+    tier: node.tier,
+    type: node.type,
+    owns: node.owns,
+    owns_zh: node.owns_zh,
+    coord: parentName || '—'
+  });
+  const kids = node.children || node._children || [];
+  for (const k of kids) {
+    flatten(k, node.type === 'coord' && parentName ? node.name : (node.type === 'coord' ? node.name : parentName));
+  }
+}
+flatten(data, null);
+
+const stateLabel_en = { '✅': 'existing', '🔄': 'renamed', '🔪': 'split', '⭐': 'new', '🔀': 'merged' };
+const stateLabel_zh = { '✅': '已有', '🔄': '改名', '🔪': '拆分', '⭐': '新增', '🔀': '合并' };
+const typeLabel_en = { coord: 'Master agent', auth: 'authority', spec: 'specialist' };
+const typeLabel_zh = { coord: 'Master agent', auth: 'authority', spec: 'specialist' };
+function stateLabelFor(emoji) {
+  return currentLang() === 'zh' ? (stateLabel_zh[emoji] || '') : (stateLabel_en[emoji] || '');
+}
+function typeLabelFor(t) {
+  return currentLang() === 'zh' ? (typeLabel_zh[t] || t) : (typeLabel_en[t] || t);
+}
+
+let currentSort = { key: 'name', dir: 'asc' };
+
+function renderTable() {
+  const tbody = document.getElementById('bundle-tbody');
+  const sorted = [...flatList].sort((a, b) => {
+    const k = currentSort.key;
+    let av = a[k] || '', bv = b[k] || '';
+    if (k === 'state') { av = a.emoji; bv = b.emoji; }
+    av = String(av).toLowerCase();
+    bv = String(bv).toLowerCase();
+    if (av < bv) return currentSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return currentSort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  tbody.innerHTML = sorted.map(r => {
+    let rowClass = '';
+    if (r.type === 'coord') rowClass = 'row-coord';
+    else if (r.type === 'auth') rowClass = 'row-auth';
+    const ownsText = currentLang() === 'zh' ? (r.owns_zh || r.owns || '') : (r.owns || '');
+    return `
+      <tr class="${rowClass}">
+        <td>${r.emoji} <span style="color:#666;font-size:11px;">${stateLabelFor(r.emoji)}</span></td>
+        <td class="cell-name">${r.name}</td>
+        <td class="cell-coord">${r.coord}</td>
+        <td><span class="tier-badge tier-${r.tier}">${r.tier}</span></td>
+        <td>${typeLabelFor(r.type)}</td>
+        <td class="cell-owns">${ownsText}</td>
+      </tr>
+    `;
+  }).join('');
+  document.querySelectorAll('#bundle-table th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sort === currentSort.key) {
+      th.classList.add(currentSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+document.querySelectorAll('#bundle-table th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (currentSort.key === key) {
+      currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSort.key = key;
+      currentSort.dir = 'asc';
+    }
+    renderTable();
+  });
+});
+
+renderTable();
+
+function showView(name) {
+  document.getElementById('view-chart').classList.toggle('active', name === 'chart');
+  document.getElementById('view-table').classList.toggle('active', name === 'table');
+  document.getElementById('tab-chart').classList.toggle('active', name === 'chart');
+  document.getElementById('tab-table').classList.toggle('active', name === 'table');
+  d3.select('#tooltip').style('display', 'none');
+}
+
+function setLang(lang) {
+  document.body.dataset.lang = lang;
+  document.getElementById('lang-en-btn').classList.toggle('active', lang === 'en');
+  document.getElementById('lang-zh-btn').classList.toggle('active', lang === 'zh');
+  d3.select('#tooltip').style('display', 'none');
+  renderTable();
+}
+</script>
+
+</body>
+</html>
