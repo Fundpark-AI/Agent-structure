@@ -1,0 +1,109 @@
+# Meeting Memo — Flow-First Priority & Runbook Scope Clarification
+
+**Date:** 2026-05-27 (call, 11 min)
+**Attendees:** Bob (Kepler), Krell (Sta Ana), Abdul; Sun (transcript only)
+**Owner:** Bob (Krell)
+**Deadline reminder:** All runbooks due **Wednesday 2026-06-03 EOD** (six days, not six hours — confirmed; see §6).
+**Related memos:** `2026-05-26-runbook-consensus-V1.md`, `2026-05-27-github-issue-draft-terminology.md`
+
+---
+
+## 1. Decision summary
+
+- **Flow comes before runbook detail.** Krell corrected the priority: *"once you get the flow, all our questions right now don't really matter — we follow the flow."* Runbook writing continues in parallel but should focus on **naming what's inside each runbook**, not building every detail, so the flow design has concrete examples to chew on.
+- **Flow ownership = Steven + Sun.** Krell will not unilaterally decide because the flow has multiple valid branches; she'd only be picking the "branch of least resistance" without seeing all the angles. Flow needs to come from the originators (Steven, Sun), informed by domain examples we supply.
+- **Inter-agent communication rule (locked):** an agent that's missing information or needs clarification **always talks back to its own coordinator** — never to another agent, never to another coordinator, never directly to the orchestrator. The coordinator handles the missing context and, if needed, escalates to the orchestrator. (Reinforces §2 Rules #1 and #2 of the 2026-05-26 memo.)
+- **Orchestrator design is deferred** until the flow is defined and runbooks are in. **No one touches the orchestrator before 2026-06-03.**
+- **Glossary alignment is owned by Bob.** Andrew (repo owner) told Bob the memo will be confusing without glossary updates; Bob is filing the draft issue in `Fundpark-AI/hmas-functions-hub` (see `2026-05-27-github-issue-draft-terminology.md`).
+
+---
+
+## 2. What "the flow" is
+
+Krell's working definition (verbatim, paraphrased):
+
+> *"The flow is a concept. The flow is how the product should work — how agents talk to the orchestrator, how the orchestrator talks to the client, how the orchestrator talks back to the agent, and anything in between."*
+
+It is **not** a runbook, an architecture diagram, or an engineering spec. It is the **communication contract** between the layers. Once it exists, engineers and writers build *toward* it without further design questions.
+
+Today's blocker: writers cannot answer "how do I communicate when I'm given the wrong directive?" or "how do I ask for missing input?" because the flow doesn't yet exist.
+
+---
+
+## 3. Flow ownership and the collaboration model
+
+Per Abdul's framing (confirmed by Krell and Bob), the flow is **collaborative**, not unilateral:
+
+| Role | Contribution to the flow |
+| --- | --- |
+| **Steven (originator)** | Optimality decisions — token cost, engineering trade-offs, structural shape |
+| **Sun (co-originator)** | Co-design with Steven; same architectural authority |
+| **Domain experts (Bob, Krell, Abdul, Alice, Haulee, …)** | For a given customer query: which agents / coordinators are involved? Example conversations? Failure modes? |
+| **Andrew (eng)** | Implementation feasibility; collapses-under-coordinators cost (see §7 follow-up) |
+
+**Bob's commitment:** supply Steven/Sun with concrete query examples drawn from the runbooks-in-progress, so the flow can be drawn against real material rather than in the abstract.
+
+---
+
+## 4. Runbook design rules — clarified
+
+These clarifications refine §4 of the 2026-05-26 memo. Apply them immediately.
+
+1. **Runbooks are independent of the flow.** A runbook describes what one agent does within its own scope. Build it without waiting for the flow. The flow only governs inter-agent and inter-coordinator communication — not the inside of any single agent.
+2. **For this round, name what's in the runbook — don't fully detail every step.** The goal by 2026-06-03 is enough structure for the flow designers to extract example conversations. Depth comes after the flow lands.
+3. **Scope question (Abdul):** should a runbook anticipate the boundary of queries it will receive, or be an information dump for any query?
+   **Answer (Krell):** *neither extreme.* The agent should have **confidence and determination** about what it needs as a specialist. If a required input is missing, it does **not** guess and does **not** dump everything — it **asks its coordinator**. The runbook should reflect that posture, not exhaustively catalogue all possible queries.
+
+---
+
+## 5. Inter-agent communication rule (locked)
+
+A single rule, stated three different ways during the call, never contradicted:
+
+- An agent that needs something it doesn't have → asks **its coordinator**, never another agent, never the orchestrator directly.
+- A coordinator that needs cross-domain context → asks **the orchestrator**, never another coordinator.
+- Therefore: sub-agents can be built **now**, in isolation, against their own runbooks. Coordinator prompts are "hanging" until the orchestrator is designed, because coordinators are the only layer that talks to the orchestrator.
+
+The orchestrator's exact behaviour when it receives a "missing info" escalation from a coordinator is **part of the flow** and is deferred to §6.
+
+---
+
+## 6. Orchestrator — deferred to after 2026-06-03
+
+- No work on the orchestrator prompt or behaviour until runbooks are in and the flow is defined.
+- Krell asked who will own building the orchestrator — **assignment is open**. She flagged this as the highest-leverage component in the system, so the assignment decision should not be casual.
+- Krell's working analogy for the orchestrator: *"like a general manager — not a CEO. It touches multiple points broadly, understands ideas, but doesn't understand deep-dive granularity."* (Note: "CEO" is being retired as a synonym per the terminology issue draft — Krell's "general manager" framing is preferred.)
+
+---
+
+## 7. Open follow-ups
+
+| # | Owner | Item | Source |
+| --- | --- | --- | --- |
+| 7.1 | **Bob** | Clarify with **Andrew**: if agents are collapsed under coordinators, how much additional engineering work is required? | Bob, opening of call |
+| 7.2 | **Steven + Sun** | Draft the flow. Bob will feed them example queries from in-progress runbooks. | Krell, throughout |
+| 7.3 | **Bob** | File the terminology issue against `Fundpark-AI/hmas-functions-hub` (already drafted). Andrew is the glossary authority and has asked for this update. | Bob ↔ Abdul exchange |
+| 7.4 | **TBD** | Assign an owner to build the orchestrator. Krell wants this named because it's the highest-impact component. | Krell, §6 above |
+| 7.5 | **All writers** | Continue runbook drafting — **name what's inside, don't fully detail** — so flow designers have material to work from. | Bob, §4 above |
+
+---
+
+## 8. Side note — Krell's Campaign Architecture pilot (Abdul's question)
+
+Abdul asked how Krell sliced research topics in the pilot Campaign Architecture runbook. Answer:
+
+- **Research-topic slicing is intentional, not automatic.** Krell selected the topics manually. Reviewing was semi-manual; aggregation was AI-assisted (~4 hours for the full run).
+- **Why manual selection matters:** especially now that the Campaign Architecture coordinator's scope has narrowed, the agent must be guided on **which topics to touch and which not to touch**. An unguided agent will sprawl.
+- For Krell's pilot, she ran 2 years of data to keep it presentable; her usual default is 5 years.
+
+**Implication for other writers:** when your runbook involves research/aggregation, **expect to define the topic boundary explicitly** in the runbook itself. Don't assume the agent will figure out the right scope from the query alone.
+
+---
+
+## 9. References
+
+- 2026-05-26 runbook consensus memo: `2026-05-26-runbook-consensus-V1.md`
+- Terminology alignment issue draft: `2026-05-27-github-issue-draft-terminology.md`
+- Final design: `HMAS-agent-restructure-v2-Alice-revision2.html`
+- Krell's pilot runbook (research-topic example): https://github.com/krell-fpai/hmas-agent-end-to-end/blob/main/docs/runbooks/campaign_architecture/01-performance-diagnostic.md
+- Glossary authority: Andrew (`Fundpark-AI/hmas-functions-hub` — `docs/GLOSSARY.md`)
